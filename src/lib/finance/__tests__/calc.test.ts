@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import snapshot from '../../../../docs/handoff/03_policy_snapshot.json';
-import { acqTax, calcBuy, calcRent, DEFAULT_PARAMS, maxAffordAll, mergeParams, won, type FinInput } from '..';
+import { withFinDefaults, acqTax, calcBuy, calcRent, DEFAULT_PARAMS, maxAffordAll, mergeParams, won, type FinInput } from '..';
 
 /** 명세 4.5: 허용 오차 ±1 만원 */
 const near = (actual: number, expected: number) => expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
@@ -115,5 +115,21 @@ describe('기타 규칙', () => {
     expect(won(3000)).toBe('3,000만원');
     expect(won(-9882)).toBe('−9,882만원');
     expect(won(0)).toBe('0원');
+  });
+});
+
+describe('자금 입력 기본값', () => {
+  it('빈 입력은 무주택·생애최초 참, 금리 4.2%, 30년', () => {
+    const f = withFinDefaults({});
+    expect(f.homeless).toBe(true);
+    expect(f.firstHome).toBe(true);
+    expect(f.rate).toBe(4.2);
+    expect(f.term).toBe(30);
+    expect(withFinDefaults({ firstHome: false }).firstHome).toBe(false);
+  });
+  it('기본값을 채운 결과는 공통 입력과 같은 판정', () => {
+    const { gIncome, bIncome, gCash, bCash, parents } = COMMON;
+    const r = calcBuy(70000, '경기 고양시', withFinDefaults({ gIncome, bIncome, gCash, bCash, parents }), P);
+    near(r.gap, 6994);
   });
 });

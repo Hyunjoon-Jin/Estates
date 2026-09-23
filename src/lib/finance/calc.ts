@@ -9,6 +9,26 @@ export const DEFAULT_RATE = 4.2;
 export const DEFAULT_TERM = 30;
 export const DEFAULT_MOVING = 300;
 
+/** 명세 2.6 기본값: 무주택·생애최초 참, 금리 4.2%, 30년, 이사·기타 300만 */
+export const FIN_DEFAULTS: Required<Pick<FinInput, 'homeless' | 'firstHome' | 'newborn' | 'over85' | 'acqRelief' | 'rate' | 'term' | 'moving' | 'mode'>> = {
+  homeless: true,
+  firstHome: true,
+  newborn: false,
+  over85: false,
+  acqRelief: false,
+  rate: DEFAULT_RATE,
+  term: DEFAULT_TERM,
+  moving: DEFAULT_MOVING,
+  mode: 'buy',
+};
+
+/** 저장된 입력값에 빠진 항목만 기본값으로 채운다. 모든 화면이 이걸 거쳐 계산해야 결과가 일치한다. */
+export function withFinDefaults(f?: FinInput | null): FinInput {
+  const out: FinInput = { ...FIN_DEFAULTS };
+  for (const [k, v] of Object.entries(f ?? {})) if (v !== undefined && v !== null) (out as Record<string, unknown>)[k] = v;
+  return out;
+}
+
 function moving(f: FinInput): number {
   return f.moving == null || f.moving === '' ? DEFAULT_MOVING : n(f.moving);
 }

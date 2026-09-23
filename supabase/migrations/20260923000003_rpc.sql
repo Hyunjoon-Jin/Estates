@@ -90,3 +90,22 @@ end $$;
 revoke all on function public.gen_invite_code() from public, anon, authenticated;
 revoke all on function public.create_household(text, text, text), public.join_household(text, text, text), public.swap_roles() from public, anon;
 grant execute on function public.create_household(text, text, text), public.join_household(text, text, text), public.swap_roles() to authenticated;
+
+-- 자금 입력은 바뀐 키만 합친다. 두 사람이 서로 다른 칸을 동시에 고쳐도 상대 입력을 덮어쓰지 않는다.
+create function public.patch_finances(p_patch jsonb) returns public.finances
+language plpgsql security invoker set search_path = '' as $$
+declare
+  hid uuid;
+  f public.finances;
+begin
+  select household_id into hid from public.household_members where user_id = auth.uid();
+  if hid is null then raise exception 'not_member'; end if;
+  if jsonb_typeof(p_patch) <> 'object' then raise exception 'invalid_patch'; end if;
+  update public.finances
+     set data = jsonb_strip_nulls(data || p_patch)
+   where household_id = hid
+  returning * into f;
+  return f;
+end $$;
+revoke all on function public.patch_finances(jsonb) from public, anon;
+grant execute on function public.patch_finances(jsonb) to authenticated;
