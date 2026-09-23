@@ -1,0 +1,15 @@
+# supabase CLI 설정 (supabase link / db push / functions deploy 용)
+project_id = "estates"
+
+[api]
+schemas = ["public"]
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/**"]
+
+[auth.email]
+enable_confirmations = false
+
+[functions.ai-compare]
+verify_jwt = true
