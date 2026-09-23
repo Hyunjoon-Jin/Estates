@@ -7,3 +7,5 @@ dist
 supabase/.temp
 supabase/.branches
 *.log
+dist-smoke
+tests/e2e/shots

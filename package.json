@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:rls": "vitest run --config vitest.rls.config.ts",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test:smoke": "VITE_SUPABASE_URL=http://mock.supabase.local VITE_SUPABASE_ANON_KEY=mock vite build --outDir dist-smoke && (vite preview --outDir dist-smoke --port 4173 --strictPort & PID=$!; sleep 2; node tests/e2e/smoke.mjs; R=$?; kill $PID; exit $R)"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",
@@ -22,6 +23,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vitest": "^2.1.9"
