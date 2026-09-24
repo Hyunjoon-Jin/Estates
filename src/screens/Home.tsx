@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BudgetRuler } from '../components/BudgetRuler';
 import { HouseHeader } from '../components/HouseHeader';
+import { SetupChecklist } from '../components/SetupChecklist';
 import { useApp } from '../state/AppData';
 import { useVisitEditor, VisitCard } from './Visits';
 
@@ -15,6 +16,7 @@ export function Home() {
   return (
     <>
       <HouseHeader />
+      <SetupChecklist />
       <div className="stats">
         {stats.map(([to, v, label]) => (
           <Link key={to} className="stat" to={to} aria-label={`${label} ${v}개, 보러 가기`} style={{ textDecoration: 'none' }}>

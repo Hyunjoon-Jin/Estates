@@ -44,7 +44,7 @@ export function HouseHeader() {
       </div>
       {household.move_in && dd != null && (
         <div className="dday">
-          입주 목표 {household.move_in.replace('-', '년 ')}월 · <b className="num">{dd >= 0 ? `D-${dd}` : `D+${-dd}`}</b>
+          입주 목표 {household.move_in.slice(0, 4)}년 {Number(household.move_in.slice(5, 7))}월 · <b className="num">{dd >= 0 ? `D-${dd}` : `D+${-dd}`}</b>
         </div>
       )}
       {alone && (

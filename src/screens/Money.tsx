@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Disclaimer } from '../components/Disclaimer';
+import { Disclosure } from '../components/Disclosure';
 import { MoneyField } from '../components/MoneyField';
 import { RegionSelect } from '../components/RegionSelect';
 import { useToast } from '../components/Toast';
@@ -193,7 +194,7 @@ function RentResultView({ r }: { r: RentResult }) {
 }
 
 export function Money() {
-  const { complexes, prices, params } = useApp();
+  const { complexes, prices, params, finances } = useApp();
   const { draft, set, saving } = useFinanceDraft();
   const f = useMemo(() => withFinDefaults(draft), [draft]);
   const mode = f.mode === 'rent' ? 'rent' : 'buy';
@@ -213,6 +214,22 @@ export function Money() {
     set({ testRegion: c.region ?? '', testOverride: c.reg_override ?? null, testPrice: lp ? lp.price_manwon : f.testPrice }, 300);
   };
 
+  // 자금 행을 받기 전에 그리면 '입력 전'으로 보고 칸을 펼쳐버리므로 기다린다
+  if (!finances) return <p className="muted" role="status" style={{ padding: '24px 0' }}>자금 정보를 불러오는 중…</p>;
+
+  const incSum = n(f.gIncome) + n(f.bIncome);
+  const needsInput = !(base.inc > 0 || base.cash > 0);
+  // 칸을 처음 펼칠지는 서버에 저장된 값으로 정한다 (draft 는 한 박자 늦게 채워짐)
+  const saved = finBase(finances.data);
+  const openInputs = !(saved.inc > 0 || saved.cash > 0);
+  const condSummary = [
+    f.homeless !== false ? '무주택' : '유주택',
+    mode === 'buy' && f.firstHome ? '생애최초' : '',
+    f.newborn ? '출산' : '',
+    `${n(f.rate) || 4.2}%`,
+    mode === 'buy' ? `${n(f.term) || 30}년` : '',
+  ].filter(Boolean).join(' · ');
+
   return (
     <>
       <div className="sec" style={{ marginTop: 4 }}>
@@ -222,32 +239,64 @@ export function Money() {
           <button type="button" aria-pressed={mode === 'rent'} onClick={() => set({ mode: 'rent' }, 300)}>전세</button>
         </div>
       </div>
-      <p className="small muted" style={{ marginTop: -4 }}>
-        입력은 둘이 함께 보고 고칠 수 있어요. 금액은 모두 만원 단위예요. <span className="saving" aria-live="polite">{saving ? '저장 중…' : ''}</span>
-      </p>
 
-      <div className="card"><h3>소득 (세전 연봉)</h3>
+      {/* 입력을 고치는 동안에도 답이 보이도록 위에 붙는 요약 */}
+      <div className={`sticky-verdict ${res ? (res.gap >= 0 ? 'ok' : 'no') : ''}`} role="status" aria-live="polite">
+        {res ? (
+          <>
+            <b>{res.gap >= 0 ? (mode === 'buy' ? '살 수 있어요' : '들어갈 수 있어요') : `${wonS(-res.gap)} 부족해요`}</b>
+            <span className="num">{res.gap >= 0 ? `여유 ${wonS(res.gap)}` : `필요 현금 ${wonS(res.need)}`} · 월 {won(Math.round(res.monthly))}</span>
+          </>
+        ) : <span>가격과 지역을 넣으면 바로 계산해요</span>}
+        <span className="saving">{saving ? '저장 중…' : ''}</span>
+      </div>
+
+      <div className="card">
+        <h3>어떤 집을 볼까요?</h3>
+        {complexes.length > 0 && (
+          <>
+            <div className="chips" style={{ margin: '6px 0' }}>
+              {complexes.slice(0, 8).map((c) => {
+                const lp = latestPrice(c.id, prices, mode);
+                return <button key={c.id} type="button" className="chip" onClick={() => pick(c.id)}>{c.name.slice(0, 10)}{lp ? ` ${wonS(lp.price_manwon)}` : ''}</button>;
+              })}
+            </div>
+            <p className="hint" style={{ marginTop: 0 }}>단지를 누르면 최근 {mode === 'buy' ? '매매' : '전세'} 시세와 지역이 채워져요.</p>
+          </>
+        )}
+        <div className="grid2">
+          <MoneyField id="fin_testPrice" label={mode === 'buy' ? '매매가' : '전세 보증금'} unit="만원" placeholder="85000" value={val('testPrice')} onChange={num('testPrice')} />
+          <label className="f" htmlFor="fin_testRegion"><span>지역</span>
+            <RegionSelect id="fin_testRegion" value={region} params={params} onChange={(v) => set({ testRegion: v, testOverride: null })} />
+          </label>
+        </div>
+      </div>
+
+      {needsInput && <p className="small" style={{ margin: '4px 2px 10px' }}>아래 <b>우리 조건</b>에 두 사람의 소득과 가용자산을 먼저 넣어주세요.</p>}
+      {res && !needsInput && (mode === 'buy' ? <BuyResultView r={res as BuyResult} p={params} /> : <RentResultView r={res as RentResult} />)}
+
+      <div className="sec"><h2>우리 조건</h2><span className="small muted">둘이 같이 고쳐요 · 만원 단위</span></div>
+      <Disclosure title="소득 (세전 연봉)" summary={incSum ? wonS(incSum) : '입력 전'} defaultOpen={openInputs}>
         <div className="grid2">
           <MoneyField id="fin_gIncome" label="신랑" unit="만원" value={val('gIncome')} onChange={num('gIncome')} />
           <MoneyField id="fin_bIncome" label="신부" unit="만원" value={val('bIncome')} onChange={num('bIncome')} />
         </div>
-      </div>
-      <div className="card"><h3>가용자산</h3>
+      </Disclosure>
+      <Disclosure title="가용자산" summary={base.cash ? wonS(base.cash) : '입력 전'} defaultOpen={openInputs}>
         <div className="grid2">
           <MoneyField id="fin_gCash" label="신랑 예금·주식 등" unit="만원" value={val('gCash')} onChange={num('gCash')} />
           <MoneyField id="fin_bCash" label="신부 예금·주식 등" unit="만원" value={val('bCash')} onChange={num('bCash')} />
           <MoneyField id="fin_parents" label="양가 지원" unit="만원" value={val('parents')} onChange={num('parents')} />
           <MoneyField id="fin_otherAsset" label="기타 (전세보증금 반환 등)" unit="만원" value={val('otherAsset')} onChange={num('otherAsset')} />
         </div>
-        <p className="small">합계 <b className="num">{won(base.cash)}</b></p>
-      </div>
-      <div className="card"><h3>기존 부채</h3>
+      </Disclosure>
+      <Disclosure title="기존 부채" summary={n(f.debtAnnual) || n(f.debtBalance) ? `연 ${wonS(f.debtAnnual)} 상환` : '없음'}>
         <div className="grid2">
           <MoneyField id="fin_debtAnnual" label="연간 원리금 상환액" unit="만원" hint="신용대출·차 할부 등 1년치" value={val('debtAnnual')} onChange={num('debtAnnual')} />
           <MoneyField id="fin_debtBalance" label="부채 잔액" unit="만원" hint="순자산 계산용" value={val('debtBalance')} onChange={num('debtBalance')} />
         </div>
-      </div>
-      <div className="card"><h3>조건</h3>
+      </Disclosure>
+      <Disclosure title="조건·금리" summary={condSummary}>
         <Check id="fin_homeless" label="두 사람 모두 무주택" checked={f.homeless !== false} onChange={(v) => set({ homeless: v })} />
         {mode === 'buy' && <Check id="fin_firstHome" label="생애최초 주택 구입" hint="두 사람 모두 집을 가져본 적 없을 때" checked={!!f.firstHome} onChange={(v) => set({ firstHome: v })} />}
         <Check id="fin_newborn" label="2년 안에 출산(예정)한 아이가 있음" hint="신생아 특례 대출 대상 여부" checked={!!f.newborn} onChange={(v) => set({ newborn: v })} />
@@ -272,31 +321,8 @@ export function Money() {
             <MoneyField id="fin_moving" label="이사·기타 비용" unit="만원" hint="기본 300만원" placeholder="300" value={val('moving')} onChange={num('moving')} />
           </div>
         )}
-      </div>
+      </Disclosure>
 
-      <div className="sec"><h2>이 집, 살 수 있을까</h2></div>
-      <div className="card">
-        <div className="grid2">
-          <MoneyField id="fin_testPrice" label={mode === 'buy' ? '매매가' : '전세 보증금'} unit="만원" placeholder="85000" value={val('testPrice')} onChange={num('testPrice')} />
-          <label className="f" htmlFor="fin_testRegion"><span>지역</span>
-            <RegionSelect id="fin_testRegion" value={region} params={params} onChange={(v) => set({ testRegion: v, testOverride: null })} />
-          </label>
-        </div>
-        {complexes.length > 0 && (
-          <>
-            <div className="chips" style={{ marginBottom: 6 }}>
-              {complexes.slice(0, 8).map((c) => {
-                const lp = latestPrice(c.id, prices, mode);
-                return <button key={c.id} type="button" className="chip" onClick={() => pick(c.id)}>{c.name.slice(0, 10)}{lp ? ` ${wonS(lp.price_manwon)}` : ''}</button>;
-              })}
-            </div>
-            <p className="hint" style={{ marginTop: 0 }}>단지를 누르면 최근 {mode === 'buy' ? '매매' : '전세'} 시세와 지역이 채워져요.</p>
-          </>
-        )}
-      </div>
-      {res ? (mode === 'buy' ? <BuyResultView r={res as BuyResult} p={params} /> : <RentResultView r={res as RentResult} />) : (
-        <div className="empty">가격과 지역을 넣으면 대출 한도와 필요한 현금을 계산해요.</div>
-      )}
       {max && (
         <div className="card">
           <h3>최대 매수 가능 가격</h3>

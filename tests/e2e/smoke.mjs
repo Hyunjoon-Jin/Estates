@@ -133,10 +133,26 @@ const maxCard = await page.locator('.card', { hasText: '최대 매수 가능 가
 check(maxCard.includes('8억 1,000만원') && maxCard.includes('9억 4,500만원'), '자금 탭: 최대 매수가 8.1억 / 8.1억 / 9.45억');
 check((await page.locator('.disclaimer').count()) > 0, '자금: 가늠용 안내');
 
-// 입력 → 0.9초 디바운스 후 patch 저장
+const sticky = await page.textContent('.sticky-verdict');
+check(sticky.includes('살 수 있어요') && sticky.includes('여유 1.2억'), `자금 탭: 상단 고정 요약 (${sticky.trim()})`);
+check(!(await page.isVisible('#fin_bIncome')), '자금 탭: 이미 입력한 조건은 접혀 있고 요약만 보임');
+// 입력 → 0.9초 디바운스 후 patch 저장, 입력 중에도 펼친 칸이 닫히지 않음
+await page.click('summary:has-text("소득")');
 await page.fill('#fin_bIncome', '3000');
+check(await page.isVisible('#fin_bIncome'), '자금 탭: 입력하는 동안 펼친 칸이 유지됨');
+check((await page.textContent('#fin_bIncome_h'))?.includes('3,000만원'), '자금 탭: 입력 금액을 한글 단위로 읽어줌');
 await page.waitForTimeout(1500);
 check(db.finances[0].data.bIncome === 3000, '자금 입력이 디바운스 후 patch_finances 로 저장됨');
+
+await page.goto(`${BASE}/price`);
+await page.waitForSelector('.pricegrid');
+const pcard = await page.locator('.card', { hasText: '분당 파크뷰' }).textContent();
+check(pcard.includes('5.5억') && pcard.includes('4억') && pcard.includes('73%'), '시세 카드: 매매·전세 분리 + 전세가율 73%');
+
+await page.goto(`${BASE}/`);
+await page.waitForSelector('.ruler');
+check((await page.locator('.checklist').count()) === 0, '홈: 준비를 다 마치면 시작하기 목록이 사라짐');
+check((await page.textContent('.dday')).includes('2027년 3월'), '헤더: 입주 목표 월 표기 (2027년 3월)');
 
 // 시트: Esc 로 닫힘
 await page.goto(`${BASE}/price`);

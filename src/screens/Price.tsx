@@ -4,12 +4,19 @@ import { Sheet } from '../components/Sheet';
 import { Sparkline } from '../components/Sparkline';
 import { useToast } from '../components/Toast';
 import { today } from '../lib/date';
-import { latestPrice, memberName, pricesOf } from '../lib/domain';
+import { isJeonse, latestPrice, memberName, pricesOf } from '../lib/domain';
 import { errorMessage } from '../lib/errors';
-import { isReg, n, won } from '../lib/finance';
+import { isReg, n, won, wonS } from '../lib/finance';
 import { sb } from '../lib/supabase';
-import { PRICE_TYPES, type Complex, type PriceType } from '../lib/types';
+import { PRICE_TYPES, type Complex, type PriceRecord, type PriceType } from '../lib/types';
 import { useApp } from '../state/AppData';
+
+/** 추이 그래프는 매매끼리만 (매매 기록이 2건 미만이면 전세끼리) */
+function trendPrices(complexId: string, prices: PriceRecord[]) {
+  const ps = pricesOf(complexId, prices);
+  const buy = ps.filter((p) => !isJeonse(p.type));
+  return buy.length >= 2 ? buy : ps.filter((p) => isJeonse(p.type));
+}
 
 export function ComplexEditor({ complex, onClose }: { complex?: Complex; onClose: () => void }) {
   const { household, params, reload } = useApp();
@@ -127,7 +134,12 @@ function ComplexDetail({ complex, onClose, onEdit }: { complex: Complex; onClose
         <a className="btn sm" target="_blank" rel="noopener noreferrer" href="https://rt.molit.go.kr/">국토부 실거래가</a>
         <a className="btn sm" target="_blank" rel="noopener noreferrer" href="https://kbland.kr/">KB부동산</a>
       </div>
-      <Sparkline prices={ps} />
+      {trendPrices(complex.id, prices).length >= 2 && (
+        <>
+          <p className="small muted" style={{ margin: '4px 0 0' }}>{isJeonse(trendPrices(complex.id, prices)[0].type) ? '전세' : '매매'} 추이</p>
+          <Sparkline prices={trendPrices(complex.id, prices)} />
+        </>
+      )}
       <h3 style={{ margin: '14px 0 6px' }}>시세 기록 추가</h3>
       <div className="grid2">
         <label className="f" htmlFor="pDate"><span>날짜</span><input id="pDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
@@ -173,11 +185,14 @@ export function Price() {
       </div>
       <p className="small muted" style={{ marginTop: -4 }}>실거래가·호가·KB시세를 직접 기록해두면 흐름이 그래프로 쌓여요. 단지를 누르면 시세 사이트로 바로 갈 수 있어요.</p>
       {complexes.length ? complexes.map((c) => {
-        const lp = latestPrice(c.id, prices);
+        const buy = latestPrice(c.id, prices, 'buy');
+        const rent = latestPrice(c.id, prices, 'rent');
         const vc = visits.filter((v) => v.complex_id === c.id).length;
+        const ratio = buy && rent ? Math.round((rent.price_manwon / buy.price_manwon) * 100) : null;
+        const trend = trendPrices(c.id, prices);
         return (
-          <button key={c.id} type="button" className="card link" onClick={() => setDetail(c.id)}>
-            <div className="row between">
+          <button key={c.id} type="button" className="card link" onClick={() => setDetail(c.id)} aria-label={`${c.name} 상세 보기`}>
+            <div className="row between" style={{ alignItems: 'flex-start' }}>
               <div className="grow">
                 <h3>{c.name}</h3>
                 <div className="row" style={{ gap: 6, marginTop: 3 }}>
@@ -186,11 +201,15 @@ export function Price() {
                   {vc > 0 && <span className="tag">임장 {vc}회</span>}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                {lp ? <><b className="num">{won(lp.price_manwon)}</b><div className="small muted">{lp.type} · {lp.date}</div></> : <span className="small muted">시세 기록 없음</span>}
-              </div>
             </div>
-            <Sparkline prices={pricesOf(c.id, prices)} />
+            {buy || rent ? (
+              <div className="pricegrid">
+                <div><span className="k">매매</span><b className="num" title={buy ? won(buy.price_manwon) : undefined}>{buy ? wonS(buy.price_manwon) : '—'}</b>{buy && <small className="muted">{buy.type} · {buy.date.slice(5).replace('-', '.')}</small>}</div>
+                <div><span className="k">전세</span><b className="num" title={rent ? won(rent.price_manwon) : undefined}>{rent ? wonS(rent.price_manwon) : '—'}</b>{rent && <small className="muted">{rent.type.replace('전세 ', '')} · {rent.date.slice(5).replace('-', '.')}</small>}</div>
+                {ratio != null && <div><span className="k">전세가율</span><b className="num">{ratio}%</b><small className="muted">전세 ÷ 매매</small></div>}
+              </div>
+            ) : <p className="small muted" style={{ marginTop: 8 }}>시세 기록 없음 · 눌러서 추가</p>}
+            {trend.length >= 2 && <Sparkline prices={trend} />}
           </button>
         );
       }) : <div className="empty"><p>보고 있는 아파트 단지를 추가해보세요.</p></div>}

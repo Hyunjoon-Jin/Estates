@@ -19,7 +19,7 @@
   --key:#E9B43E; --keyInk:#2A1E00; --groom:#6FA6DE; --bride:#E27C9F; --ok:#5FBF86; --bad:#EE7B6D; --warn:#E0B354;
   color-scheme:dark;
 }
-*,*::before,*::after{box-sizing:inherit}
+*,*::before,*::after{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
 body{min-height:100%}
@@ -172,3 +172,40 @@ input,select,textarea,.btn{max-width:100%}
 .stats .stat b{font-variant-numeric:tabular-nums}
 @media (max-width:380px){.grid2{grid-template-columns:1fr}.couple{font-size:1.25rem}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* ---- UX 다듬기: 답 먼저, 입력은 접어서 ---- */
+.sticky-verdict{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 -16px 12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:var(--bg);border-bottom:1px solid var(--line);font-size:.9rem}
+.sticky-verdict b{font-size:1rem}
+.sticky-verdict.ok b{color:var(--ok)}
+.sticky-verdict.no b{color:var(--bad)}
+.sticky-verdict .saving{margin-left:auto}
+details.disclosure{padding:0}
+details.disclosure>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;min-height:48px}
+details.disclosure>summary::-webkit-details-marker{display:none}
+details.disclosure>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:-4px 4px 0 0}
+details.disclosure[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.d-title{font-weight:600}
+.d-sum{margin-left:auto;color:var(--muted);font-size:.88rem;text-align:right}
+.d-body{padding:0 14px 12px}
+.hint .spoken{color:var(--ink);font-weight:600}
+.pricegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.pricegrid>div{display:flex;flex-direction:column;min-width:0}
+.pricegrid .k{font-size:.75rem;color:var(--muted)}
+.pricegrid b{font-size:1rem}
+.pricegrid small{font-size:.72rem}
+.checklist ol{list-style:none;margin:8px 0 0;padding:0}
+.checklist li{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);min-height:44px}
+.checklist li:last-child{border-bottom:none}
+.checklist .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;flex:none}
+.checklist li.done{color:var(--muted)}
+.checklist li.done .grow{text-decoration:line-through}
+.checklist li.done .dot{background:var(--ok);border-color:var(--ok);color:var(--paper)}
+.checklist li.next{font-weight:600}
+.checklist li.next .dot{border-color:var(--key)}
+.progress{height:6px;border-radius:3px;background:var(--soft);border:1px solid var(--line);overflow:hidden;margin-top:6px}
+.progress i{display:block;height:100%;background:var(--key)}
+/* 별점: 손가락으로 누르기 쉽게 (최소 32px) */
+.stars button{min-width:30px;min-height:34px;display:inline-flex;align-items:center;justify-content:center}
+/* 그리드 칸이 입력창 기본 너비에 밀려 넘치지 않게 */
+.grid2>*,.unit,label.f{min-width:0}
+.unit input{min-width:0}
