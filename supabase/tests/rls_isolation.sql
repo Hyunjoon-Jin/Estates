@@ -131,6 +131,17 @@ select pg_temp.check((select name = '가정A 단지' from public.complexes), 'A 
 select pg_temp.check((select count(*) = 1 from public.visits), 'A 임장은 B 의 delete 에 영향받지 않음');
 select pg_temp.check((select data->>'gIncome' = '6000' from public.finances), 'A 자금은 B 의 update 에 영향받지 않음');
 
+do $$ begin
+  truncate public.complexes cascade;
+  raise exception 'FAIL: 일반 사용자가 truncate 했다';
+exception when insufficient_privilege then raise notice 'ok - truncate 거부';
+end $$;
+do $$ begin
+  update public.finances set household_id = household_id;
+  raise exception 'FAIL: finances 의 data 외 열을 고쳤다';
+exception when insufficient_privilege then raise notice 'ok - finances 는 data 열만 수정 가능';
+end $$;
+
 -- anon 은 아무것도 못 본다
 reset role;
 select set_config('role', 'anon', true);

@@ -34,6 +34,8 @@ alter table public.policy_snapshot enable row level security;
 
 -- anon 은 아무것도 못 한다
 revoke all on all tables in schema public from anon;
+-- Supabase 기본 grant 중 RLS 를 우회하거나 필요 없는 권한은 뺀다
+revoke truncate, references, trigger on all tables in schema public from authenticated;
 
 -- households: 구성원만 읽기, 입주 목표 월만 수정. 생성·합류는 RPC 로만.
 revoke insert, update, delete on public.households from authenticated;
@@ -81,7 +83,7 @@ create policy scores_delete on public.candidate_scores for delete to authenticat
   using (user_id = (select auth.uid()));
 
 -- finances: 가정당 1행. 행은 create_household 가 만든다.
-revoke insert, delete on public.finances from authenticated;
+revoke insert, update, delete on public.finances from authenticated;
 grant select, update (data) on public.finances to authenticated;
 create policy finances_select on public.finances for select to authenticated using (public.is_member(household_id));
 create policy finances_update on public.finances for update to authenticated

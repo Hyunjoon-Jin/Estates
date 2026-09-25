@@ -3,19 +3,21 @@
 코드는 준비됐습니다. 아래는 계정·결제·키·정책 확인처럼 저장소 밖에서 사람이 해야 하는 일입니다.
 위에서부터 순서대로 하면 됩니다. 괄호 안 시간은 대략적인 소요 시간입니다.
 
-## 1. Supabase 프로젝트 (필수, 15분)
+## 1. Supabase 프로젝트 (완료, 2026-09-25)
 
-- [ ] **프로젝트 만들기:** [supabase.com/dashboard](https://supabase.com/dashboard) → `exercise` 조직 → **New project**
-  - 이름 `estates`, 지역 **Northeast Asia (Seoul)**
-  - DB 비밀번호는 비밀번호 관리자에 저장해 두세요.
-  - Pro 조직이라 프로젝트당 컴퓨트 요금이 추가됩니다(가장 작은 인스턴스 기준 월 약 $10). 결제 화면에서 확인하세요.
-- [ ] **알려줄 값:** 만든 뒤 **Project Settings → General**의 `Reference ID`를 알려주세요. 그러면 다음은 제가 합니다.
-  - 마이그레이션 4개와 정책 seed 적용
-  - 보안 advisor 점검
-  - Edge Function 배포
-- [ ] **서버 격리 테스트 준비:** **Project Settings → API Keys**의 `service_role` 키를 로컬 `.env.test`에만 넣으세요. 형식은 `.env.example` 아래쪽 주석과 같습니다.
-  - 채팅, 커밋, Netlify 어디에도 붙여넣지 마세요.
-  - 이 키가 있어야 `npm run test:rls`(실서버 격리 테스트)를 돌릴 수 있습니다.
+- [x] **프로젝트:** `Estates`, 서울 리전 (Reference ID `xmafodhhfbzhzhjjkorg`)
+- [x] **DB:** 마이그레이션 5개, 정책 seed 1행, Realtime 테이블 9개 적용
+- [x] **실제 DB 격리 테스트 통과:** 트랜잭션 안에서 돌리고 롤백해서 테스트 데이터는 남지 않았습니다.
+- [x] **보안 점검:** 남은 경고는 가정 만들기·합류·역할 바꾸기 RPC 3개뿐입니다. 명세상 서버에서 권한 검사를 하려고 일부러 연 함수입니다.
+- [x] **Edge Function:** `ai-compare` 배포 완료. `ANTHROPIC_API_KEY`를 넣기 전까지는 "설정되지 않았어요" 안내가 뜹니다.
+- [ ] **(선택) 원격 테스트용 키:** `npm run test:rls`를 돌리려면 **Project Settings → API Keys**의 `service_role` 키(또는 `sb_secret_` 키)를 로컬 `.env.test`에만 넣으세요. 채팅·커밋·Netlify 어디에도 붙여넣지 마세요.
+
+앱 환경변수에 넣을 값 (공개돼도 되는 값입니다):
+
+```
+VITE_SUPABASE_URL=https://xmafodhhfbzhzhjjkorg.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_YtOruMhOr1Z4kAaj_GsXTw_slWyNDIQ
+```
 
 ## 2. 로그인 메일 (필수, 20분)
 
@@ -35,7 +37,7 @@
 
 - [ ] **카카오**
   - [developers.kakao.com](https://developers.kakao.com) → 애플리케이션 추가 → **카카오 로그인 활성화**
-  - Redirect URI에 `https://<ref>.supabase.co/auth/v1/callback`를 등록합니다.
+  - Redirect URI에 `https://xmafodhhfbzhzhjjkorg.supabase.co/auth/v1/callback`를 등록합니다.
   - 동의항목: 닉네임. 이메일은 비즈앱 전환이 필요할 수 있습니다.
   - REST API 키와 Client Secret을 Supabase **Authentication → Providers → Kakao**에 넣습니다. 이메일 동의를 못 받으면 "이메일 없는 사용자 허용" 옵션을 켭니다.
 - [ ] **구글**
@@ -49,9 +51,7 @@
 - [ ] **사이트 연결:** [app.netlify.com](https://app.netlify.com) → **Add new site → Import from Git** → `hyunjoon-jin/estates` 저장소
   - 브랜치는 PR을 합친 뒤 `main`, 지금 바로 보려면 `claude/new-session-7nv3xv`
   - 빌드 설정은 `netlify.toml`에 있어서 따로 입력할 필요가 없습니다.
-- [ ] **환경변수:** **Site configuration → Environment variables**에 두 값을 넣습니다.
-  - `VITE_SUPABASE_URL` = `https://<ref>.supabase.co`
-  - `VITE_SUPABASE_ANON_KEY` = Supabase **API Keys**의 anon 또는 publishable 키
+- [ ] **환경변수:** **Site configuration → Environment variables**에 1번 끝의 두 값을 그대로 넣습니다.
   - 여기에 service_role 키를 넣으면 안 됩니다. `VITE_`가 붙은 값은 누구나 볼 수 있는 번들에 들어갑니다.
 - [ ] **주소 등록:** 배포된 주소를 2번의 Site URL과 Redirect URLs에 넣습니다.
 - [ ] **(선택) 사이트 이름:** 정하면 알려주세요. 예: `our-newlywed-home`
