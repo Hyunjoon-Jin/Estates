@@ -70,9 +70,9 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YtOruMhOr1Z4kAaj_GsXTw_slWyNDIQ
 코드와 서버 함수(`molit-trades`)는 배포돼 있습니다. 인증키만 넣으면 동작합니다.
 
 - [ ] **활용신청:** [공공데이터포털](https://www.data.go.kr) 로그인 → 아래 두 API를 검색해 각각 **활용신청** (개발계정은 보통 바로 또는 1~2시간 안에 승인)
-  - `국토교통부_아파트 매매 실거래가 자료`
+  - `국토교통부_아파트 매매 실거래가 상세 자료` (일반판 `…매매 실거래가 자료`여도 됩니다. 상세판을 먼저 쓰고 안 되면 일반판으로 넘어갑니다)
   - `국토교통부_아파트 전월세 실거래가 자료`
-- [ ] **인증키 복사:** 마이페이지 → 개발계정 → 신청한 API → **일반 인증키 (Decoding)**. Encoding 키를 넣어도 동작합니다.
+- [ ] **인증키 복사:** 마이페이지 → 개발계정 → 신청한 API → **일반 인증키**. Encoding(`%2B`가 섞인 것)·Decoding 둘 다 동작합니다. 두 API는 같은 키를 씁니다.
 - [ ] **Supabase에 넣기:** [Edge Functions → Secrets](https://supabase.com/dashboard/project/xmafodhhfbzhzhjjkorg/functions/secrets)에 이름 `MOLIT_SERVICE_KEY`, 값에 인증키를 넣습니다. 채팅에 붙이지 마세요.
 - [ ] **확인:** 앱 시세 탭 → 단지 → "실거래 불러오기". 인증키 오류가 뜨면 승인이 아직이거나 키가 틀린 것입니다.
 - 참고

@@ -3,10 +3,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { explainError, nameMatches, parseMolitXml, recentMonths, type Deal, type Kind } from './parse.ts';
 
-const SERVICES: Record<Kind, string> = {
-  trade: 'RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade',
-  rent: 'RTMSDataSvcAptRent/getRTMSDataSvcAptRent',
+// 매매는 '상세자료'(TradeDev)를 먼저 쓰고, 그 API 를 신청하지 않은 키면 일반판(Trade)으로 넘어간다.
+const SERVICES: Record<Kind, string[]> = {
+  trade: ['RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev', 'RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade'],
+  rent: ['RTMSDataSvcAptRent/getRTMSDataSvcAptRent'],
 };
+// 이 인스턴스에서 한 번 성공한 서비스를 기억해 다음부터 바로 쓴다
+const working: Partial<Record<Kind, string>> = {};
 const MAX_CALLS = 30;           // 한 요청에서 API 를 부르는 최대 횟수
 const ROWS = 1000;
 
@@ -29,11 +32,11 @@ function keyParam(raw: string): string {
   return raw.includes('%') ? raw : encodeURIComponent(raw);
 }
 
-async function fetchMonth(key: string, kind: Kind, lawd: string, ymd: string): Promise<{ items: Deal[]; calls: number; error?: string }> {
+async function fetchMonthFrom(svc: string, key: string, kind: Kind, lawd: string, ymd: string): Promise<{ items: Deal[]; calls: number; error?: string }> {
   const items: Deal[] = [];
   let calls = 0;
   for (let page = 1; page <= 10; page++) {
-    const url = `https://apis.data.go.kr/1613000/${SERVICES[kind]}?serviceKey=${keyParam(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ymd}&pageNo=${page}&numOfRows=${ROWS}`;
+    const url = `https://apis.data.go.kr/1613000/${svc}?serviceKey=${keyParam(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ymd}&pageNo=${page}&numOfRows=${ROWS}`;
     calls++;
     const res = await fetch(url, { headers: { Accept: 'application/xml' } });
     const xml = await res.text();
@@ -43,6 +46,22 @@ async function fetchMonth(key: string, kind: Kind, lawd: string, ymd: string): P
     if (page * ROWS >= p.totalCount) break;
   }
   return { items, calls };
+}
+
+async function fetchMonth(key: string, kind: Kind, lawd: string, ymd: string): Promise<{ items: Deal[]; calls: number; error?: string }> {
+  const order = working[kind] ? [working[kind]!, ...SERVICES[kind].filter((s) => s !== working[kind])] : SERVICES[kind];
+  let calls = 0;
+  let firstError: string | undefined;
+  for (const svc of order) {
+    const r = await fetchMonthFrom(svc, key, kind, lawd, ymd);
+    calls += r.calls;
+    if (!r.error) {
+      working[kind] = svc;
+      return { items: r.items, calls };
+    }
+    firstError ??= r.error;
+  }
+  return { items: [], calls, error: firstError };
 }
 
 Deno.serve(async (req) => {
