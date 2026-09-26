@@ -46,6 +46,16 @@ const db = {
   policy_snapshot: [{ id: 1, updated_at: snap.updatedAt, headline: snap.headline, items: snap.items, params: snap.params, regulated: snap.regulated }],
 };
 
+const molitCalls = [];
+const mk = (kind, date, floor, area, price, extra = {}) => ({ kind, name: '분당파크뷰', dong: '정자동', jibun: '1', sggCd: '41135', area, floor, date, price, monthlyRent: 0, buildYear: '2004', cancelled: false, key: `molit|${kind}|${date}|${floor}|${area}|${price}`, ...extra });
+const MOLIT = [
+  mk('trade', '2026-09-12', '15', 84.97, 56000),
+  mk('trade', '2026-08-20', '3', 84.97, 53500),
+  mk('trade', '2026-08-05', '9', 59.8, 42000),
+  mk('trade', '2026-07-30', '11', 84.97, 55000, { cancelled: true }),
+  mk('rent', '2026-09-01', '7', 84.97, 41000),
+  mk('rent', '2026-08-11', '2', 84.97, 10000, { monthlyRent: 150 }),
+];
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, role: 'authenticated', exp: 4102444800 })}.sig`;
 const session = {
@@ -67,6 +77,13 @@ async function newPage(scheme) {
     const one = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object');
     const json = (body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     if (url.pathname.startsWith('/auth/v1/user')) return json(session.user);
+    if (url.pathname === '/functions/v1/molit-trades') {
+      const b = req.postDataJSON();
+      molitCalls.push(b);
+      const deals = MOLIT.filter((d) => d.kind === b.kind);
+      if (b.mode === 'names') return json({ names: [{ name: '분당파크뷰', sggCd: '41135', dong: '정자동', count: 3, latestDate: '2026-09-12', latestPrice: 56000, areas: [85, 60] }], errors: [] });
+      return json({ deals, total: deals.length, errors: [] });
+    }
     const m = url.pathname.match(/^\/rest\/v1\/(rpc\/)?(\w+)/);
     if (!m) return route.fulfill({ status: 404, body: '' });
     if (m[1]) {
@@ -81,6 +98,13 @@ async function newPage(scheme) {
     let rows = db[m[2]] ?? [];
     for (const [k, v] of url.searchParams) {
       if (v.startsWith('eq.')) rows = rows.filter((r) => String(r[k]) === v.slice(3));
+    }
+    if (req.method() === 'POST' && db[m[2]]) {
+      const body = [].concat(req.postDataJSON());
+      const keys = new Set(db[m[2]].map((r) => r.source_key).filter(Boolean));
+      if (body.some((r) => r.source_key && keys.has(r.source_key))) return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ code: '23505' }) });
+      body.forEach((r, i) => db[m[2]].push({ id: `new${db[m[2]].length}${i}`, ...r }));
+      return route.fulfill({ status: 201, body: '' });
     }
     if (req.method() !== 'GET') return json(one ? rows[0] ?? null : rows);
     return json(one ? rows[0] ?? null : rows);
@@ -153,6 +177,43 @@ await page.goto(`${BASE}/`);
 await page.waitForSelector('.ruler');
 check((await page.locator('.checklist').count()) === 0, '홈: 준비를 다 마치면 시작하기 목록이 사라짐');
 check((await page.textContent('.dday')).includes('2027년 3월'), '헤더: 입주 목표 월 표기 (2027년 3월)');
+
+// 국토부 실거래 불러오기
+await page.goto(`${BASE}/price`);
+await page.click('button[aria-label="분당 파크뷰 상세 보기"]');
+await page.waitForSelector('[role=dialog]');
+await page.click('text=실거래 불러오기');
+await page.waitForSelector('ul.deals li');
+check(molitCalls.at(-1)?.lawdCds?.[0] === '41135' && molitCalls.at(-1)?.name === '분당 파크뷰', `실거래: 분당구 코드 41135 와 단지명으로 조회 (${JSON.stringify(molitCalls.at(-1))})`);
+await page.locator('.molit').screenshot({ path: `${SHOTS}/light-molit.png` });
+const rows = await page.locator('ul.deals li').count();
+check(rows === 3, `실거래: 관심 평형 84㎡ 만 기본 표시 (${rows}건, 59㎡ 제외)`);
+const btn = await page.textContent('button:has-text("건 기록에 추가")');
+check(btn.includes('2건'), `실거래: 해제 거래는 빼고 2건 선택 (${btn.trim()})`);
+const before = db.price_records.length;
+await page.click('button:has-text("건 기록에 추가")');
+await page.waitForTimeout(600);
+const added = db.price_records.slice(before);
+check(added.length === 2 && added.every((r) => r.source === 'molit' && r.type === '실거래' && r.source_key), `실거래: 2건이 출처·중복키와 함께 저장 (${added.length})`);
+check(added.some((r) => r.price_manwon === 56000 && r.date === '2026-09-12' && r.floor === '15층 84.97㎡'), '실거래: 가격·날짜·층·면적이 그대로 저장');
+const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+check(sw <= 360, `실거래 시트도 360px 에서 가로 스크롤 없음 (${sw})`);
+await page.click('button[aria-pressed="false"]:has-text("전월세")');
+await page.click('text=실거래 불러오기');
+await page.waitForSelector('ul.deals li');
+const rentBtn = await page.textContent('button:has-text("건 기록에 추가")');
+check(rentBtn.includes('1건'), `실거래: 전월세는 월세 빼고 전세 1건만 선택 (${rentBtn.trim()})`);
+await page.keyboard.press('Escape');
+
+// 단지 추가: 국토부 단지명 찾기
+await page.click('text=단지 추가');
+await page.fill('#cxName', '분당 파크');
+await page.selectOption('#cxRegion', '경기 성남시 분당구');
+await page.click('text=국토부 실거래 단지명으로 찾기');
+await page.waitForSelector('button.pickname');
+await page.click('button.pickname');
+check((await page.textContent('[role=dialog]')).includes('국토부 단지명: 분당파크뷰'), '단지 추가: 국토부 단지명을 골라 저장 준비');
+await page.keyboard.press('Escape');
 
 // 시트: Esc 로 닫힘
 await page.goto(`${BASE}/price`);

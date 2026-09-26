@@ -65,6 +65,21 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YtOruMhOr1Z4kAaj_GsXTw_slWyNDIQ
   - 직접 넣기: `npx supabase secrets set ANTHROPIC_API_KEY=...`
 - [ ] **모델 정하기:** 기본은 `claude-opus-5`입니다. 비용을 줄이려면 Secrets에 `ANTHROPIC_MODEL=claude-sonnet-5`를 추가하세요. 700자 요약이라 품질 차이는 크지 않을 가능성이 높습니다.
 
+## 5-1. 국토부 실거래가 연동 (필수, 15분 + 승인 대기)
+
+코드와 서버 함수(`molit-trades`)는 배포돼 있습니다. 인증키만 넣으면 동작합니다.
+
+- [ ] **활용신청:** [공공데이터포털](https://www.data.go.kr) 로그인 → 아래 두 API를 검색해 각각 **활용신청** (개발계정은 보통 바로 또는 1~2시간 안에 승인)
+  - `국토교통부_아파트 매매 실거래가 자료`
+  - `국토교통부_아파트 전월세 실거래가 자료`
+- [ ] **인증키 복사:** 마이페이지 → 개발계정 → 신청한 API → **일반 인증키 (Decoding)**. Encoding 키를 넣어도 동작합니다.
+- [ ] **Supabase에 넣기:** [Edge Functions → Secrets](https://supabase.com/dashboard/project/xmafodhhfbzhzhjjkorg/functions/secrets)에 이름 `MOLIT_SERVICE_KEY`, 값에 인증키를 넣습니다. 채팅에 붙이지 마세요.
+- [ ] **확인:** 앱 시세 탭 → 단지 → "실거래 불러오기". 인증키 오류가 뜨면 승인이 아직이거나 키가 틀린 것입니다.
+- 참고
+  - 하루 조회 한도는 개발계정 기준 API당 1,000회 안팎입니다. 같은 지역·달은 서버에 캐시해서(이번 달·지난달 6시간, 그 전 7일) 실제 호출은 훨씬 적습니다.
+  - **화성시 4개 구(2026-02 신설), 부천시 구, 인천, 지방**은 시군구 코드가 자동으로 안 채워집니다. 단지 상세에서 5자리 코드를 한 번 넣어주세요([법정동코드 조회](https://www.code.go.kr/stdcode/regCodeL.do), 법정동코드 앞 5자리).
+  - 호가와 KB시세는 공식 공개 API가 없어 자동으로 못 가져옵니다. 단지 상세의 네이버부동산·호갱노노·KB부동산 링크로 확인하고 직접 기록하세요.
+
 ## 6. 정책 수치 확인 (필수, 30분, 계약 전 재확인)
 
 명세 7장대로 seed 수치는 공개 자료 요약이라 출처끼리 다른 값이 있습니다. 아래를 공식 창구에서 확인하고 다른 값이 있으면 알려주세요. 새 정책 행을 넣어 갱신하겠습니다(재배포 불필요).
@@ -89,6 +104,5 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YtOruMhOr1Z4kAaj_GsXTw_slWyNDIQ
 
 ## 8. 나중에 정할 것
 
-- [ ] **실거래가 자동 가져오기(명세 2단계):** 공공데이터포털에서 "국토교통부 아파트 매매 실거래가" 활용 신청 → 서비스키 발급 → Supabase Secrets에 넣기
 - [ ] **개인 도메인:** Netlify **Domain management**에서 연결
 - [ ] **정책 스냅샷 편집 권한:** 앱 안 관리자 화면을 만들지, 지금처럼 SQL로만 갱신할지

@@ -26,6 +26,10 @@ export interface Complex {
   meta: string | null;
   commute: string | null;
   memo: string | null;
+  /** 국토부 실거래가 조회용 시군구 코드 (없으면 지역으로 추정) */
+  lawd_cd: string | null;
+  /** 국토부 데이터상의 정확한 단지명 */
+  molit_name: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -39,6 +43,8 @@ export interface PriceRecord {
   type: PriceType;
   price_manwon: number;
   floor: string | null;
+  source?: 'manual' | 'molit' | null;
+  source_key?: string | null;
   created_by: string | null;
 }
 export const RATE_KEYS = [

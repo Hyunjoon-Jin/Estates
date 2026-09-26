@@ -209,3 +209,11 @@ details.disclosure[open]>summary::after{transform:rotate(-135deg);margin-top:4px
 /* 그리드 칸이 입력창 기본 너비에 밀려 넘치지 않게 */
 .grid2>*,.unit,label.f{min-width:0}
 .unit input{min-width:0}
+/* 실거래가 불러오기 */
+.molit{border-top:1px dashed var(--line);margin-top:12px;padding-top:4px}
+ul.deals{list-style:none;margin:0;padding:0;max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+ul.deals li{border-bottom:1px dashed var(--line)}
+ul.deals li:last-child{border-bottom:none}
+ul.deals label,.pickname{display:flex;align-items:center;gap:8px;padding:8px 10px;min-height:44px;font-size:.88rem;cursor:pointer;width:100%;background:none;border:none;text-align:left;font:inherit;color:inherit}
+ul.deals label.off{color:var(--muted);cursor:default}
+ul.deals input{width:18px;height:18px;flex:none;accent-color:var(--ink)}

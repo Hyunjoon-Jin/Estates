@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MolitImport, MolitNameSearch, useRefreshAll } from '../components/Molit';
 import { RegionSelect } from '../components/RegionSelect';
 import { Sheet } from '../components/Sheet';
 import { Sparkline } from '../components/Sparkline';
@@ -24,6 +25,7 @@ export function ComplexEditor({ complex, onClose }: { complex?: Complex; onClose
   const [f, setF] = useState({
     name: complex?.name ?? '', region: complex?.region ?? '', reg_override: complex?.reg_override ?? '',
     area: complex?.area ?? '', meta: complex?.meta ?? '', commute: complex?.commute ?? '', memo: complex?.memo ?? '',
+    lawd_cd: complex?.lawd_cd ?? '', molit_name: complex?.molit_name ?? '',
   });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,6 +37,7 @@ export function ComplexEditor({ complex, onClose }: { complex?: Complex; onClose
     const d = {
       household_id: household.id, name: f.name.trim(), region: f.region || null, reg_override: f.reg_override || null,
       area: f.area.trim() || null, meta: f.meta.trim() || null, commute: f.commute.trim() || null, memo: f.memo.trim() || null,
+      lawd_cd: /^\d{5}$/.test(f.lawd_cd) ? f.lawd_cd : null, molit_name: f.molit_name.trim() || null,
     };
     setBusy(true);
     const { error } = complex ? await sb().from('complexes').update(d).eq('id', complex.id) : await sb().from('complexes').insert(d);
@@ -63,6 +66,10 @@ export function ComplexEditor({ complex, onClose }: { complex?: Complex; onClose
         <input id="cxName" type="text" maxLength={40} value={f.name} onChange={(e) => set('name')(e.target.value)} placeholder="예: 동천 래미안 이스트팰리스" />
       </label>
       <label className="f" htmlFor="cxRegion"><span>지역</span><RegionSelect id="cxRegion" value={f.region} onChange={set('region')} params={params} /></label>
+      {f.region && (
+        <MolitNameSearch region={f.region} lawdCd={f.lawd_cd} query={f.name} onPick={(n) => setF((x) => ({ ...x, name: x.name.trim() ? x.name : n.name, molit_name: n.name, lawd_cd: n.sggCd || x.lawd_cd }))} />
+      )}
+      {f.molit_name && <p className="hint" style={{ marginTop: -6 }}>국토부 단지명: <b>{f.molit_name}</b> · 실거래 새로고침에 이 이름을 써요 <button type="button" className="iconbtn small" onClick={() => setF((x) => ({ ...x, molit_name: '' }))} aria-label="국토부 단지명 지우기">지우기</button></p>}
       <label className="f" htmlFor="cxOv"><span>규제지역 여부</span>
         <select id="cxOv" value={f.reg_override} onChange={(e) => set('reg_override')(e.target.value)}>
           <option value="">자동 판단</option>
@@ -140,7 +147,8 @@ function ComplexDetail({ complex, onClose, onEdit }: { complex: Complex; onClose
           <Sparkline prices={trendPrices(complex.id, prices)} />
         </>
       )}
-      <h3 style={{ margin: '14px 0 6px' }}>시세 기록 추가</h3>
+      <MolitImport complex={complex} />
+      <h3 style={{ margin: '14px 0 6px' }}>직접 기록 (호가·KB시세 등)</h3>
       <div className="grid2">
         <label className="f" htmlFor="pDate"><span>날짜</span><input id="pDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
         <label className="f" htmlFor="pType"><span>구분</span>
@@ -173,6 +181,7 @@ function ComplexDetail({ complex, onClose, onEdit }: { complex: Complex; onClose
 
 export function Price() {
   const { complexes, prices, visits, params } = useApp();
+  const refresh = useRefreshAll();
   const [edit, setEdit] = useState<{ c?: Complex } | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const cur = complexes.find((c) => c.id === detail);
@@ -183,7 +192,12 @@ export function Price() {
         <h2>관심 단지 시세</h2>
         <button type="button" className="btn key sm" onClick={() => setEdit({})}>단지 추가</button>
       </div>
-      <p className="small muted" style={{ marginTop: -4 }}>실거래가·호가·KB시세를 직접 기록해두면 흐름이 그래프로 쌓여요. 단지를 누르면 시세 사이트로 바로 갈 수 있어요.</p>
+      <p className="small muted" style={{ marginTop: -4 }}>단지를 누르면 국토부 실거래가를 불러오거나 호가·KB시세를 직접 기록할 수 있어요.</p>
+      {refresh.count > 0 && (
+        <button type="button" className="btn sm" onClick={refresh.run} disabled={refresh.busy} style={{ marginBottom: 10 }}>
+          {refresh.busy ? '실거래 확인 중…' : `관심 단지 ${refresh.count}곳 실거래 새로고침`}
+        </button>
+      )}
       {complexes.length ? complexes.map((c) => {
         const buy = latestPrice(c.id, prices, 'buy');
         const rent = latestPrice(c.id, prices, 'rent');

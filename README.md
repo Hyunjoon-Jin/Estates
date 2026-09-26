@@ -24,7 +24,7 @@ src/state/AppData.tsx     가정 데이터 로드 + Realtime 구독
 src/components/, screens/ 화면
 supabase/migrations/      스키마, RLS, RPC, Realtime
 supabase/seed.sql         policy_snapshot 초기 데이터 (03_policy_snapshot.json)
-supabase/functions/       ai-compare (후보 비교 정리, Claude API)
+supabase/functions/       ai-compare (후보 비교 정리, Claude API), molit-trades (국토부 실거래가)
 supabase/tests/           rls_isolation.sql (psql 로 실행하는 RLS 테스트)
 tests/rls/                원격 프로젝트 대상 RLS 통합 테스트 (Vitest)
 tests/e2e/smoke.mjs       목업 Supabase 로 띄우는 화면 스모크 테스트
@@ -59,14 +59,20 @@ npm run build
 4. (선택) 카카오·구글 로그인
    - **Authentication → Providers**에서 각 provider를 켜고 앱 키를 넣습니다.
    - 그다음 `.env`(또는 Netlify 환경변수)에 `VITE_OAUTH_KAKAO=true`, `VITE_OAUTH_GOOGLE=true`를 넣습니다.
-5. (선택) AI 비교 정리
+5. 국토부 실거래가: 공공데이터포털에서 아파트 매매·전월세 실거래가 자료를 활용신청한 뒤
+   ```bash
+   npx supabase secrets set MOLIT_SERVICE_KEY=<일반 인증키>
+   npx supabase functions deploy molit-trades
+   ```
+   단지 상세의 "실거래 불러오기"와 시세 탭의 "실거래 새로고침"이 이 함수를 씁니다. 결과는 `molit_cache`에 캐시됩니다.
+6. (선택) AI 비교 정리
    ```bash
    npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
    # 모델을 바꾸려면: npx supabase secrets set ANTHROPIC_MODEL=<model-id>  (기본 claude-opus-5)
    npx supabase functions deploy ai-compare
    ```
    키가 없으면 버튼을 눌렀을 때 "아직 설정되지 않았어요" 안내가 나옵니다.
-6. **API 키 → anon(publishable) 키와 Project URL**을 `.env`에 넣습니다. service role 키는 어디에도 `VITE_`로 넣지 않습니다.
+7. **API 키 → anon(publishable) 키와 Project URL**을 `.env`에 넣습니다. service role 키는 어디에도 `VITE_`로 넣지 않습니다.
 
 ### 정책 수치 갱신
 
