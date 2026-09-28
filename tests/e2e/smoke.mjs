@@ -55,6 +55,8 @@ const MOLIT = [
   mk('trade', '2026-07-30', '11', 84.97, 55000, { cancelled: true }),
   mk('rent', '2026-09-01', '7', 84.97, 41000),
   mk('rent', '2026-08-11', '2', 84.97, 10000, { monthlyRent: 150 }),
+  mk('trade', '2026-09-03', '8', 84.5, 61000, { name: '정자한솔마을' }),
+  mk('trade', '2026-08-28', '12', 84.5, 60000, { name: '정자한솔마을' }),
 ];
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, role: 'authenticated', exp: 4102444800 })}.sig`;
@@ -80,7 +82,8 @@ async function newPage(scheme) {
     if (url.pathname === '/functions/v1/molit-trades') {
       const b = req.postDataJSON();
       molitCalls.push(b);
-      const deals = MOLIT.filter((d) => d.kind === b.kind);
+      const q = (b.name ?? '').replace(/\s/g, '');
+      const deals = MOLIT.filter((d) => d.kind === b.kind && (!q || d.name.includes(q) || q.includes(d.name)));
       if (b.mode === 'names') return json({ names: [{ name: '분당파크뷰', sggCd: '41135', dong: '정자동', count: 3, latestDate: '2026-09-12', latestPrice: 56000, areas: [85, 60] }], errors: [] });
       return json({ deals, total: deals.length, errors: [] });
     }
@@ -103,7 +106,9 @@ async function newPage(scheme) {
       const body = [].concat(req.postDataJSON());
       const keys = new Set(db[m[2]].map((r) => r.source_key).filter(Boolean));
       if (body.some((r) => r.source_key && keys.has(r.source_key))) return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ code: '23505' }) });
-      body.forEach((r, i) => db[m[2]].push({ id: `new${db[m[2]].length}${i}`, ...r }));
+      const inserted = body.map((r, i) => ({ id: `new${db[m[2]].length}${i}`, ...r }));
+      db[m[2]].push(...inserted);
+      if ((req.headers()['prefer'] ?? '').includes('return=representation')) return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(one ? inserted[0] : inserted) });
       return route.fulfill({ status: 201, body: '' });
     }
     if (req.method() !== 'GET') return json(one ? rows[0] ?? null : rows);
@@ -114,7 +119,7 @@ async function newPage(scheme) {
   return page;
 }
 
-const ROUTES = ['/', '/price', '/visit', '/cand', '/money', '/policy', '/settings'];
+const ROUTES = ['/', '/price', '/deals', '/visit', '/cand', '/money', '/policy', '/settings'];
 
 for (const scheme of ['light', 'dark']) {
   const page = await newPage(scheme);
@@ -205,7 +210,30 @@ const rentBtn = await page.textContent('button:has-text("건 기록에 추가")'
 check(rentBtn.includes('1건'), `실거래: 전월세는 월세 빼고 전세 1건만 선택 (${rentBtn.trim()})`);
 await page.keyboard.press('Escape');
 
+// 실거래 탐색 화면
+await page.goto(`${BASE}/deals`);
+await page.waitForSelector('text=실거래 조회');
+check((await page.getAttribute('nav.tabs a[href="/price"]', 'aria-current')) === 'page', '탐색 화면에서도 시세 탭이 선택 상태');
+await page.fill('#dName', '');
+await page.click('button:has-text("실거래 조회")');
+await page.waitForSelector('.grouphead');
+check(molitCalls.at(-1)?.limit === 1000 && molitCalls.at(-1)?.lawdCds?.[0] === '41135', `탐색: 분당구 전체를 조회 (${JSON.stringify(molitCalls.at(-1))})`);
+check((await page.locator('.grouphead').count()) === 2, '탐색: 단지별로 2곳 묶음');
+await page.screenshot({ path: `${SHOTS}/light-deals.png`, fullPage: true });
+const beforeCx = db.complexes.length, beforeP = db.price_records.length;
+await page.locator('.card', { hasText: '정자한솔마을' }).locator('button:has-text("관심 단지로 담기")').click();
+await page.waitForTimeout(700);
+const newCx = db.complexes.slice(beforeCx);
+check(newCx.length === 1 && newCx[0].molit_name === '정자한솔마을' && newCx[0].lawd_cd === '41135' && newCx[0].region === '경기 성남시 분당구', '탐색: 관심 단지로 담으면 단지명·코드·지역이 채워짐');
+check(db.price_records.length - beforeP === 2, `탐색: 담으면서 실거래 2건 기록 (${db.price_records.length - beforeP})`);
+await page.click('button[aria-pressed="false"]:has-text("거래별")');
+check((await page.locator('li.dealrow').count()) === 6, '탐색: 거래별 보기 6건 (해제 거래도 표시)');
+check((await page.locator('li.dealrow.off').count()) === 1, '탐색: 해제 거래는 흐리게');
+const sw2 = await page.evaluate(() => document.documentElement.scrollWidth);
+check(sw2 <= 360, `탐색 화면 360px 가로 스크롤 없음 (${sw2})`);
+
 // 단지 추가: 국토부 단지명 찾기
+await page.goto(`${BASE}/price`);
 await page.click('text=단지 추가');
 await page.fill('#cxName', '분당 파크');
 await page.selectOption('#cxRegion', '경기 성남시 분당구');

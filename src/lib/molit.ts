@@ -33,6 +33,7 @@ interface Req {
   months: number;
   kind: MolitKind;
   name?: string;
+  limit?: number;
 }
 
 async function call<T>(body: Req & { mode?: 'deals' | 'names' }): Promise<T & { errors: string[] }> {
@@ -52,7 +53,11 @@ async function call<T>(body: Req & { mode?: 'deals' | 'names' }): Promise<T & { 
     throw new Error('네트워크에 연결하지 못했어요. 연결을 확인하고 다시 시도해주세요.');
   }
   const out = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(out.message ?? (res.status === 403 ? '가정 구성원만 조회할 수 있어요.' : '실거래가를 불러오지 못했어요. 잠시 뒤 다시 시도해주세요.'));
+  if (!res.ok) {
+    const err = new Error(out.message ?? (res.status === 403 ? '가정 구성원만 조회할 수 있어요.' : '실거래가를 불러오지 못했어요. 잠시 뒤 다시 시도해주세요.'));
+    (err as Error & { code?: string }).code = out.error;
+    throw err;
+  }
   return out;
 }
 
@@ -72,4 +77,43 @@ export function areaOf(text?: string | null): number | null {
 /** 관심 평형과 같은 면적대인지 (±3㎡) */
 export function sameArea(area: number, target: number | null): boolean {
   return target == null || Math.abs(area - target) <= 3;
+}
+
+export interface ComplexGroup {
+  name: string;
+  sggCd: string;
+  dong: string;
+  deals: MolitDeal[];
+  latest: MolitDeal;
+  min: number;
+  max: number;
+  areas: number[];
+}
+
+/** 거래를 단지별로 묶는다 (해제 거래는 가격 요약에서 뺀다) */
+export function groupByComplex(deals: MolitDeal[]): ComplexGroup[] {
+  const map = new Map<string, MolitDeal[]>();
+  for (const d of deals) {
+    const k = `${d.sggCd}|${d.name}`;
+    const arr = map.get(k);
+    if (arr) arr.push(d); else map.set(k, [d]);
+  }
+  const out: ComplexGroup[] = [];
+  for (const arr of map.values()) {
+    arr.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    const valid = arr.filter((d) => !d.cancelled);
+    const base = valid.length ? valid : arr;
+    const prices = base.map((d) => d.price);
+    out.push({
+      name: arr[0].name,
+      sggCd: arr[0].sggCd,
+      dong: arr[0].dong,
+      deals: arr,
+      latest: base[0],
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+      areas: [...new Set(arr.map((d) => Math.round(d.area)))].sort((a, b) => a - b),
+    });
+  }
+  return out;
 }

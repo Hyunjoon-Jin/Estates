@@ -79,13 +79,14 @@ Deno.serve(async (req) => {
   const { data: member } = await asUser.from('household_members').select('household_id').limit(1).maybeSingle();
   if (!member) return json({ error: 'not_member' }, 403);
 
-  let body: { lawdCds?: unknown; months?: unknown; kind?: unknown; name?: unknown; mode?: unknown };
+  let body: { lawdCds?: unknown; months?: unknown; kind?: unknown; name?: unknown; mode?: unknown; limit?: unknown };
   try { body = await req.json(); } catch { return json({ error: 'bad_request' }, 400); }
   const lawdCds = (Array.isArray(body.lawdCds) ? body.lawdCds : []).map(String).filter((c) => /^\d{5}$/.test(c)).slice(0, 4);
   const months = Math.min(12, Math.max(1, Math.round(Number(body.months) || 3)));
   const kind: Kind = body.kind === 'rent' ? 'rent' : 'trade';
   const name = String(body.name ?? '').slice(0, 40);
   const mode = body.mode === 'names' ? 'names' : 'deals';
+  const limit = Math.min(1000, Math.max(1, Math.round(Number(body.limit) || 300)));
   if (!lawdCds.length) return json({ error: 'no_region', message: '이 지역의 법정동 코드가 없어요. 단지 정보에서 시군구 코드(5자리)를 넣어주세요.' }, 400);
 
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -131,5 +132,5 @@ Deno.serve(async (req) => {
   }
 
   matched.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  return json({ deals: matched.slice(0, 300), total: matched.length, calls, cached, errors });
+  return json({ deals: matched.slice(0, limit), total: matched.length, calls, cached, errors });
 });

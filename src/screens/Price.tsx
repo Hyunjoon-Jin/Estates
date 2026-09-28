@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MolitImport, MolitNameSearch, useRefreshAll } from '../components/Molit';
+import { PriceNav } from '../components/PriceNav';
 import { RegionSelect } from '../components/RegionSelect';
 import { Sheet } from '../components/Sheet';
 import { Sparkline } from '../components/Sparkline';
@@ -188,6 +190,7 @@ export function Price() {
 
   return (
     <>
+      <PriceNav />
       <div className="sec" style={{ marginTop: 4 }}>
         <h2>관심 단지 시세</h2>
         <button type="button" className="btn key sm" onClick={() => setEdit({})}>단지 추가</button>
@@ -226,7 +229,12 @@ export function Price() {
             {trend.length >= 2 && <Sparkline prices={trend} />}
           </button>
         );
-      }) : <div className="empty"><p>보고 있는 아파트 단지를 추가해보세요.</p></div>}
+      }) : (
+        <div className="empty">
+          <p>보고 있는 아파트 단지를 추가해보세요.<br />국토부 실거래가에서 찾아 바로 담을 수도 있어요.</p>
+          <Link className="btn key" to="/deals" style={{ marginTop: 8 }}>실거래 탐색하기</Link>
+        </div>
+      )}
       {edit && <ComplexEditor complex={edit.c} onClose={() => setEdit(null)} />}
       {cur && !edit && <ComplexDetail complex={cur} onClose={() => setDetail(null)} onEdit={() => setEdit({ c: cur })} />}
     </>

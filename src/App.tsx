@@ -3,6 +3,7 @@ import { TabBar } from './components/TabBar';
 import { supabase } from './lib/supabase';
 import { AuthScreen } from './screens/Auth';
 import { Candidates } from './screens/Candidates';
+import { Deals } from './screens/Deals';
 import { Home } from './screens/Home';
 import { Money } from './screens/Money';
 import { Onboard } from './screens/Onboard';
@@ -39,6 +40,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/price" element={<Price />} />
+          <Route path="/deals" element={<Deals />} />
           <Route path="/visit" element={<Visits />} />
           <Route path="/cand" element={<Candidates />} />
           <Route path="/money" element={<Money />} />

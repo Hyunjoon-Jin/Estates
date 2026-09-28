@@ -9,7 +9,7 @@ export function SetupChecklist() {
   const steps: { done: boolean; label: string; to: string; cta: string }[] = [
     { done: members.length >= 2, label: '짝꿍 초대하기', to: '/settings', cta: '위 초대코드를 보내주세요' },
     { done: b.inc > 0 && b.cash > 0, label: '소득과 가용자산 넣기', to: '/money', cta: '자금 입력' },
-    { done: complexes.length > 0, label: '관심 단지 추가하기', to: '/price', cta: '단지 추가' },
+    { done: complexes.length > 0, label: '관심 단지 추가하기', to: '/deals', cta: '실거래에서 찾기' },
     { done: visits.length > 0, label: '첫 임장 기록 남기기', to: '/visit', cta: '기록하기' },
     { done: !!household?.move_in, label: '입주 목표 월 정하기', to: '/settings', cta: '설정' },
   ];
