@@ -70,15 +70,22 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} - ${msg}`); if
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 
-async function newPage(scheme) {
+const authCalls = [];
+async function newPage(scheme, loggedIn = true) {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, colorScheme: scheme, deviceScaleFactor: 2 });
-  await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-mock-auth-token', JSON.stringify(session)]);
+  if (loggedIn) await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-mock-auth-token', JSON.stringify(session)]);
   await ctx.route(`${SB}/**`, async (route) => {
     const req = route.request();
     const url = new URL(req.url());
     const one = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object');
     const json = (body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     if (url.pathname.startsWith('/auth/v1/user')) return json(session.user);
+    if (url.pathname.startsWith('/auth/v1/token')) {
+      const b = req.postDataJSON();
+      authCalls.push(b);
+      if (b.password !== 'correct-horse-9') return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'invalid_credentials', error_code: 'invalid_credentials', msg: 'Invalid login credentials' }) });
+      return json(session);
+    }
     if (url.pathname === '/functions/v1/molit-trades') {
       const b = req.postDataJSON();
       molitCalls.push(b);
@@ -249,6 +256,27 @@ await page.click('text=단지 추가');
 await page.waitForSelector('[role=dialog]');
 await page.keyboard.press('Escape');
 check((await page.locator('[role=dialog]').count()) === 0, '입력 시트가 Esc 로 닫힘');
+
+// 로그아웃 상태: 이메일+비밀번호 로그인
+const lp = await newPage('light', false);
+await lp.goto(`${BASE}/`);
+await lp.waitForSelector('#pw');
+check(await lp.isVisible('button:has-text("회원가입")') && await lp.isVisible('text=메일 링크로 로그인'), '로그인 화면: 비밀번호 로그인 기본, 가입·메일 링크는 보조');
+await lp.fill('#email', 'groom@example.com');
+await lp.fill('#pw', 'wrong-pass-1');
+await lp.click('form button[type=submit]');
+await lp.waitForSelector('.err');
+check((await lp.textContent('.err')).includes('비밀번호가 맞지 않아요'), '틀린 비밀번호는 한국어 안내');
+await lp.fill('#pw', 'correct-horse-9');
+await lp.click('form button[type=submit]');
+await lp.waitForSelector('nav.tabs', { timeout: 10000 });
+check(authCalls.at(-1)?.email === 'groom@example.com', '비밀번호로 로그인하면 메일 없이 바로 홈');
+await lp.reload();
+await lp.waitForSelector('nav.tabs', { timeout: 10000 });
+check(true, '새로고침해도 로그인 유지');
+await lp.goto(`${BASE}/settings`);
+check(await lp.waitForSelector('text=비밀번호 정하기·바꾸기', { timeout: 8000 }).then(() => true, () => false), '설정: 비밀번호 정하기·바꾸기');
+await lp.context().close();
 
 await browser.close();
 console.log(fails.length ? `\n${fails.length} failed` : '\nall passed');

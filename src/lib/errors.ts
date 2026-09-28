@@ -10,6 +10,19 @@ const MAP: Record<string, string> = {
   invite_code_exhausted: '초대코드를 만들지 못했어요. 잠시 뒤 다시 시도해주세요.',
 };
 
+/** Supabase Auth 오류 → 안내 */
+export function authMessage(e: { message?: string; code?: string } | null): string {
+  const m = `${e?.code ?? ''} ${e?.message ?? ''}`;
+  if (/invalid_credentials|Invalid login credentials/i.test(m)) return '이메일 또는 비밀번호가 맞지 않아요. 비밀번호를 잊었다면 아래 "비밀번호 재설정"을 눌러주세요.';
+  if (/user_already_exists|already registered/i.test(m)) return '이미 가입된 이메일이에요. 로그인 탭에서 로그인해주세요.';
+  if (/email_not_confirmed|Email not confirmed/i.test(m)) return '가입 확인 메일의 링크를 먼저 눌러주세요. 메일이 안 보이면 스팸함을 확인해주세요.';
+  if (/weak_password|Password should|at least/i.test(m)) return '비밀번호가 너무 쉬워요. 8자 이상, 영문과 숫자를 섞어주세요.';
+  if (/pwned|leaked/i.test(m)) return '유출된 적 있는 비밀번호예요. 다른 비밀번호를 써주세요.';
+  if (/rate|security purposes|over_email_send_rate/i.test(m)) return '요청이 너무 잦아요. 1분쯤 뒤 다시 시도해주세요.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return '네트워크에 연결하지 못했어요. 연결을 확인하고 다시 시도해주세요.';
+  return '처리하지 못했어요. 잠시 뒤 다시 시도해주세요.';
+}
+
 export function errorMessage(e: unknown, fallback = '저장하지 못했어요. 네트워크를 확인하고 다시 시도해주세요.'): string {
   const msg = (e as { message?: string } | null)?.message ?? '';
   if (MAP[msg]) return MAP[msg];

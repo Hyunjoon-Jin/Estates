@@ -224,3 +224,6 @@ ul.deals input{width:18px;height:18px;flex:none;accent-color:var(--ink)}
 .grouphead{display:flex;gap:10px;align-items:flex-start;width:100%;background:none;border:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .dealrow{display:flex;align-items:center;gap:8px;padding:8px 10px;min-height:40px;font-size:.88rem}
 .dealrow.off{color:var(--muted)}
+input[type=email],input[type=password]{width:100%;border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:9px 11px;min-height:42px}
+.pwtoggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);font-size:.8rem;padding:6px 8px;cursor:pointer;min-height:32px}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--paper)}

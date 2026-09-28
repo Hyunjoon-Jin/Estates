@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { TabBar } from './components/TabBar';
 import { supabase } from './lib/supabase';
-import { AuthScreen } from './screens/Auth';
+import { AuthScreen, SetPassword } from './screens/Auth';
 import { Candidates } from './screens/Candidates';
 import { Deals } from './screens/Deals';
 import { Home } from './screens/Home';
@@ -18,7 +18,7 @@ function Loading({ text = '불러오는 중…' }: { text?: string }) {
 }
 
 export function App() {
-  const { authReady, session, hid, household } = useApp();
+  const { authReady, session, hid, household, recovery, endRecovery } = useApp();
 
   if (!supabase) {
     return (
@@ -30,6 +30,14 @@ export function App() {
   }
   if (!authReady) return <Loading />;
   if (!session) return <AuthScreen />;
+  if (recovery) {
+    return (
+      <main className="wrap"><div className="center onb">
+        <h1>우리 신혼집</h1>
+        <div className="card" style={{ marginTop: 18 }}><SetPassword onDone={endRecovery} /></div>
+      </div></main>
+    );
+  }
   if (hid === undefined) return <Loading text="가정 정보를 확인하는 중…" />;
   if (hid === null) return <Onboard />;
   if (!household) return <Loading text="가정 정보를 불러오는 중…" />;

@@ -13,6 +13,9 @@ type Table =
 export interface AppData {
   session: Session | null;
   authReady: boolean;
+  /** 비밀번호 재설정 메일 링크로 들어온 상태 */
+  recovery: boolean;
+  endRecovery: () => void;
   uid: string | null;
   /** undefined = 아직 모름, null = 소속 가정 없음 */
   hid: string | null | undefined;
@@ -47,6 +50,7 @@ const HOUSEHOLD_TABLES: Table[] = ['complexes', 'price_records', 'visits', 'cand
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [recovery, setRecovery] = useState(false);
   const [hid, setHid] = useState<string | null | undefined>(undefined);
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -67,7 +71,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setAuthReady(true);
     });
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data } = supabase.auth.onAuthStateChange((e, s) => {
+      if (e === 'PASSWORD_RECOVERY') setRecovery(true);
+      setSession(s);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -218,7 +225,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // hid 가 새로 생기면(가정 만들기/합류 직후) 다시 찾도록 노출
   const value: AppData = {
-    session, authReady, uid, hid, household, members, me, complexes, prices, visits, candidates, scores,
+    session, authReady, recovery, endRecovery: () => setRecovery(false), uid, hid, household, members, me, complexes, prices, visits, candidates, scores,
     finances, fin, policy, params,
     reload: async (t) => {
       if (!t) await findHousehold();

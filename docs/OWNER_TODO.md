@@ -19,19 +19,19 @@ VITE_SUPABASE_URL=https://xmafodhhfbzhzhjjkorg.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_YtOruMhOr1Z4kAaj_GsXTw_slWyNDIQ
 ```
 
-## 2. 로그인 메일 (필수, 20분)
+## 2. 로그인 설정 (필수, 10분)
 
-매직링크 로그인이 기본이라 메일이 실제로 가야 합니다.
+로그인은 **이메일 + 비밀번호**가 기본입니다. 한 번 로그인하면 그 기기에서 로그아웃 전까지 유지되고, 메일은 가입 확인·비밀번호 재설정 때만 씁니다.
 
-- [ ] **커스텀 SMTP 연결:** **Authentication → Emails → SMTP Settings**에서 켜세요.
-  - Supabase 기본 메일 발송은 시험용이라 받는 주소와 발송량에 제한이 있습니다. 배우자 계정 메일이 안 올 수 있습니다.
-  - 예: [Resend](https://resend.com)(무료 한도 있음). 가입 → 도메인 인증 또는 테스트 주소 → SMTP 정보 입력.
-- [ ] **메일 문구 한국어로 바꾸기:** **Authentication → Emails → Templates → Magic Link**
-  - 제목 예: `우리 신혼집 로그인 링크`
-  - 본문에 `{{ .ConfirmationURL }}` 링크를 남겨두세요.
-- [ ] **돌아올 주소 등록:** **Authentication → URL Configuration**
-  - Site URL: Netlify 주소 (4번에서 생김)
-  - Redirect URLs: `http://localhost:5173/**`, `https://<netlify-주소>/**`
+- [ ] **(권장) 가입 확인 메일 끄기:** 둘만 쓰는 앱이라 메일 확인 없이 바로 가입되게 하면 가장 편합니다.
+  - Supabase → **Authentication → Sign In / Providers → Email** → **Confirm email** 끄기 → Save
+  - 켜 두면 가입할 때 확인 메일을 딱 한 번 누르면 됩니다.
+- [ ] **돌아올 주소 등록:** **Authentication → URL Configuration** (비밀번호 재설정 링크가 앱으로 돌아오게)
+  - Site URL: `https://woori-sinhonjip.netlify.app`
+  - Redirect URLs: `https://woori-sinhonjip.netlify.app/**`, `http://localhost:5173/**`
+- [ ] **(권장) 유출 비밀번호 차단 켜기:** **Authentication → Attack Protection**(또는 Providers → Email)에서 "Prevent use of leaked passwords" 켜기
+- [ ] **(선택) 커스텀 SMTP:** 확인 메일·재설정 메일이 안 오면 **Authentication → Emails → SMTP Settings**에 [Resend](https://resend.com) 등을 연결하세요. Supabase 기본 발송은 시험용이라 받는 주소와 발송량이 제한됩니다.
+- 이미 메일 링크로 가입한 계정은 앱 **설정 → 비밀번호 정하기·바꾸기**에서 비밀번호를 한 번 정하면 됩니다.
 
 ## 3. 카카오·구글 로그인 (선택, 각 20~30분)
 

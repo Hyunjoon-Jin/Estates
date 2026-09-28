@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HouseHeader } from '../components/HouseHeader';
+import { SetPassword } from './Auth';
 import { useToast } from '../components/Toast';
 import { roleLabel } from '../lib/domain';
 import { errorMessage } from '../lib/errors';
@@ -53,6 +54,10 @@ export function Settings() {
           <button type="button" className="btn key sm" onClick={save} disabled={busy}>설정 저장</button>
           <button type="button" className="btn sm ghost" onClick={swap}>신랑·신부 바꾸기</button>
         </div>
+      </div>
+      <div className="card">
+        <SetPassword title="비밀번호 정하기·바꾸기" onDone={() => toast('비밀번호를 저장했어요. 다음부터 이메일과 비밀번호로 로그인해요')} />
+        <p className="hint">메일 링크로 가입했다면 여기서 비밀번호를 한 번 정해두세요. 그다음부터는 메일 없이 로그인할 수 있어요.</p>
       </div>
       <div className="card">
         <p className="small muted">{session?.user.email} 로 로그인했어요.</p>
